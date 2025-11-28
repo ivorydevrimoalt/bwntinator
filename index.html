@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[[Bwntinator - Cipher Translator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Dark background for the body */
+            background-color: #1f2937; /* Gray-800 */
+        }
+        /* Custom styling for dark mode textareas */
+        textarea {
+            color: #f9fafb; /* Light gray text */
+            background-color: #374151; /* Gray-700 */
+            border-color: #4b5563; /* Gray-600 border */
+        }
+        textarea:focus {
+            border-color: #60a5fa; /* Blue-400 focus ring */
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.5); /* Custom focus shadow */
+        }
+        ::placeholder {
+            color: #9ca3af; /* Placeholder color */
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 bg-gray-800 min-h-screen flex items-center justify-center">
+
+    <div id="app" class="w-full max-w-4xl bg-gray-900 shadow-2xl rounded-xl p-6 md:p-10 border border-gray-700 text-gray-100">
+        <h1 class="text-3xl font-extrabold text-white mb-2 text-center">[[Bwntinator</h1>
+        <p class="text-gray-400 mb-8 text-center">
+            Put a plain text and it will encode it for you, paste it in the chatbox and people think you are the rapper
+        </p>
+
+        <!-- Removed the Configuration Details block -->
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Plain Text to Code Converter -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-inner border border-gray-700">
+                <h2 class="text-xl font-semibold text-gray-200 mb-4 flex items-center">
+                    Plain Text → Encoded Cipher
+                </h2>
+                <textarea id="plainText" rows="6" placeholder="Enter text here (A-Z, space only)..."
+                    class="w-full p-3 rounded-lg focus:ring-blue-500 text-sm"></textarea>
+                <button onclick="encodeText()"
+                    class="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg transition duration-150 shadow-lg shadow-blue-800/50">
+                    Encode Text
+                </button>
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Encoded Output (Wrapped with [[]] and Space as ]] [[):</label>
+                    <textarea id="encodedOutput" rows="6" readonly
+                        class="w-full p-3 border border-green-400 bg-gray-700 rounded-lg text-sm font-mono overflow-auto"></textarea>
+                </div>
+            </div>
+
+            <!-- Code to Plain Text Converter -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-inner border border-gray-700">
+                <h2 class="text-xl font-semibold text-gray-200 mb-4 flex items-center">
+                    Encoded Cipher → Plain Text
+                </h2>
+                <textarea id="encodedText" rows="6" placeholder="Enter the 9-char code string here, including the [[...]] wrappers..."
+                    class="w-full p-3 rounded-lg focus:ring-blue-500 text-sm font-mono"></textarea>
+                <button onclick="decodeText()"
+                    class="mt-4 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg transition duration-150 shadow-lg shadow-indigo-800/50">
+                    Decode Cipher
+                </button>
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Decoded Output:</label>
+                    <textarea id="decodedOutput" rows="6" readonly
+                        class="w-full p-3 border border-green-400 bg-gray-700 rounded-lg text-sm overflow-auto"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // The original source string provided by the user (256 characters)
+        const SOURCE_STRING = "bwkwbkwtwkwbwpwlwlwpwpwbwbwkwkwbwkwbkwtwkwbwpwlwlwpwpwbwbwkwkwbwkwbkwtwkwbwpwlwlwpwpwbwbwkwkwbwkwbkwtwkwbwpwlwlwpwpwbwbwkwkwbwkwbkwtwkwbwpwlwlwpwpwbwbwkwkwbwkwbkwtwkwbwpwlwlwpwpwbwbwkwkwbwkwbkwtwkwbwpwlwlwpwpwbwbwkwkwbwkwbkwtwkwbwpwlwlwpwpwbwbwkwkw";
+        // We only map A-Z now, as space is handled specially
+        const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; // 26 symbols
+        const CODE_LENGTH = 9;
+
+        const CHAR_TO_CODE = {};
+        const CODE_TO_CHAR = {};
+
+        // 1. Generate the translation maps
+        (function generateMaps() {
+            let error = false;
+            for (let i = 0; i < ALPHABET.length; i++) {
+                const char = ALPHABET[i];
+                const start = i * CODE_LENGTH;
+
+                if (start + CODE_LENGTH > SOURCE_STRING.length) {
+                    console.error(`Insufficient string length for all ${ALPHABET.length} symbols.`);
+                    error = true;
+                    break;
+                }
+
+                const code = SOURCE_STRING.substring(start, start + CODE_LENGTH);
+
+                // Populate maps
+                CHAR_TO_CODE[char] = code;
+                CODE_TO_CHAR[code] = char;
+            }
+
+            if (error) {
+                document.getElementById('decodedOutput').value = "Error: Map generation failed. Check console for details.";
+            } else {
+                console.log("Translation maps successfully generated.");
+            }
+        })();
+
+        // Helper function for user feedback (replacing alert/confirm)
+        function showMessage(elementId, message, isError = false) {
+            const textarea = document.getElementById(elementId);
+            textarea.value = message;
+            if (isError) {
+                textarea.style.borderColor = '#fca5a5'; /* Red-300 for dark mode error */
+            } else {
+                textarea.style.borderColor = '#4ade80'; /* Green-400 for dark mode success */
+            }
+        }
+
+        // 2. Encoding Function (Plain Text -> Encoded Cipher)
+        function encodeText() {
+            const plainTextElement = document.getElementById('plainText');
+            const plainText = plainTextElement.value.toUpperCase().trim();
+
+            if (!plainText) {
+                showMessage('encodedOutput', "Please enter text to encode.", true);
+                return;
+            }
+
+            let encodedResult = [];
+            let unsupportedChars = new Set();
+
+            for (const char of plainText) {
+                if (char === ' ') {
+                    // Special encoding for space character as requested
+                    encodedResult.push(']] [[');
+                } else if (CHAR_TO_CODE.hasOwnProperty(char)) {
+                    encodedResult.push(CHAR_TO_CODE[char]);
+                } else if (char.match(/[A-Z]/)) {
+                    // A-Z is mapped, but if somehow missing from map (shouldn't happen), track it
+                    unsupportedChars.add(char);
+                }
+            }
+
+            if (unsupportedChars.size > 0) {
+                const charList = Array.from(unsupportedChars).join(', ');
+                console.warn(`The following characters were ignored as they are not mapped: ${charList}`);
+            }
+
+            let output = encodedResult.join('');
+            
+            if (output.length === 0 && plainText.length > 0) {
+                showMessage('encodedOutput', "Error: Input contained only unmapped characters. Please use A-Z and space only.", true);
+            } else {
+                // Add the requested FULL wrappers
+                output = "[[" + output + "]]";
+                showMessage('encodedOutput', output, false);
+            }
+        }
+
+        // 3. Decoding Function (Encoded Cipher -> Plain Text)
+        function decodeText() {
+            const encodedTextElement = document.getElementById('encodedText');
+            let encodedText = encodedTextElement.value.toLowerCase().trim();
+
+            if (!encodedText) {
+                showMessage('decodedOutput', "Please enter the encoded cipher to decode.", true);
+                return;
+            }
+            
+            let originalText = encodedText;
+
+            // 1. Remove the outer wrappers if they exist
+            if (encodedText.startsWith('[[') && encodedText.endsWith(']]')) {
+                encodedText = encodedText.substring(2, encodedText.length - 2).trim();
+            }
+
+            // Validation: Check if the characters in the data blocks are allowed
+            const rawCipherChars = encodedText.replace(/\[|\]|\s/g, '');
+            if (rawCipherChars && !rawCipherChars.match(/^[bwkwtpl]+$/)) {
+                 showMessage('decodedOutput', "Error: Encoded cipher contains invalid characters (excluding brackets/spaces). Only 'b, w, k, t, p, l' are allowed.", true);
+                 return;
+            }
+
+            // 2. Split the cipher into blocks using the space marker ']] [['
+            const blocks = encodedText.split(']] [[');
+            let decodedResult = [];
+            let error = false;
+            
+            for (const block of blocks) {
+                const currentBlock = block.trim();
+                let currentBlockDecoded = '';
+
+                if (currentBlock.length === 0) {
+                    continue; // Skip empty blocks from splitting
+                }
+
+                // Validation: Check block length integrity
+                if (currentBlock.length % CODE_LENGTH !== 0) {
+                    showMessage('decodedOutput', `Error: Cipher block length (${currentBlock.length}) is not a multiple of the code length (${CODE_LENGTH}). Remainder is ${currentBlock.length % CODE_LENGTH} characters.`, true);
+                    return;
+                }
+                
+                // Decode block
+                let position = 0;
+                while (position < currentBlock.length) {
+                    const codeSegment = currentBlock.substring(position, position + CODE_LENGTH);
+
+                    if (CODE_TO_CHAR.hasOwnProperty(codeSegment)) {
+                        currentBlockDecoded += CODE_TO_CHAR[codeSegment];
+                    } else {
+                        // If a segment doesn't map, we insert a placeholder
+                        currentBlockDecoded += `[${codeSegment}]`;
+                        console.warn(`Unknown code segment found: ${codeSegment} in block: ${currentBlock}`);
+                        error = true;
+                    }
+
+                    position += CODE_LENGTH;
+                }
+
+                decodedResult.push(currentBlockDecoded);
+            }
+            
+            // 3. Join blocks with a standard space
+            const output = decodedResult.join(' ');
+            
+            if (output.includes('[') || error) {
+                showMessage('decodedOutput', output + "\n\n(Warning: Unknown code segments were found and marked with square brackets.)", true);
+            } else if (output.length === 0 && originalText.length > 0) {
+                showMessage('decodedOutput', "Error: Could not decode cipher. Please check the format.", true);
+            } else {
+                showMessage('decodedOutput', output, false);
+            }
+        }
+    </script>
+</body>
+</html>
